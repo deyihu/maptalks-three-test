@@ -9,5 +9,5 @@ this is maptalks.three examples,is base on https://github.com/maptalks/maptalks.
 
 * [Extrude Buildings](https://maptalks.github.io/maptalks.three/demo/buildings.html).
 * [Load MTL Model](https://maptalks.github.io/maptalks.three/demo/obj.html).
-* [More Examples](https://maptalks.github.io/maptalks.three/demo/obj.html).
+* [More Examples](https://deyihu.github.io/src/maptalks-three-test/examples/index.html).
 
