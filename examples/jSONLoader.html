@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ThreeLayer on maptalks demo</title>
+  <script src="https://cdn.bootcss.com/jquery/2.1.0/jquery.min.js"></script>
+<link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maptalks/dist/maptalks.css">
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/maptalks/dist/maptalks.min.js"></script>
+<script src="https://cdn.bootcss.com/randomcolor/0.5.2/randomColor.js"></script>
+<!-- <script type="text/javascript" src="https://threejs.org/build/three.js"></script> -->
+<script src="https://cdn.bootcss.com/three.js/92/three.js"></script>
+
+
+
+
+  <script type="text/javascript" src="../dist/maptalks.three.js"></script>
+  <script type="x-shader/x-vertex" id="vertexshader">
+    attribute float size;
+    varying vec3 vColor;
+    void main() {
+        vColor = color;
+        vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+        gl_PointSize = size * ( 300.0 / -mvPosition.z );
+        gl_Position = projectionMatrix * mvPosition;
+    }
+</script>
+
+<script type="x-shader/x-fragment" id="fragmentshader">
+    uniform sampler2D texture;
+    varying vec3 vColor;
+    void main() {
+        gl_FragColor = vec4( vColor, 1.0 );
+        gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+    }
+</script>
+
+
+<script id="vertexShader1" type="x-shader/x-vertex">
+    varying vec2 vUv;
+    void main() {
+        vUv = uv;
+        gl_Position = vec4( position, 1.0 );
+    }
+</script>
+
+<script id="fragmentShader1" type="x-shader/x-fragment">
+    uniform sampler2D tAudioData;
+    varying vec2 vUv;
+    void main() {
+        vec3 backgroundColor = vec3( 0.125, 0.125, 0.125 );
+        vec3 color = vec3( 1.0, 1.0, 0.0 );
+        float f = texture2D( tAudioData, vec2( vUv.x, 0.0 ) ).r;
+        float i = step( vUv.y, f ) * step( f - 0.0125, vUv.y );
+        gl_FragColor = vec4( mix( backgroundColor, color, i ), 1.0 );
+    }
+</script>
+
+
+  <style>
+    html,body{
+        margin:0px;
+        height:100%;
+        width: 100%;
+    }
+    #map { width: 100%; height: 700px;}
+  </style>
+</head>
+<body>
+<div id="map"></div>
+<button onclick="gotosuzhou()">goto suzhou</button>
+<button onclick="gotooringal()">goto orginal</button>
+<button onclick="gotony()">goto ny</button>
+<script type="text/javascript" src="js/map.js"></script>
+<script type="text/javascript" src="js/meterials.js"></script>
+<script type="text/javascript" src="js/buildings.js"></script>
+<script type="text/javascript" src="js/lines.js"></script>
+<script type="text/javascript" src="js/points.js"></script>
+<script type="text/javascript" src="js/polygon.js"></script>
+<script type="text/javascript" src="js/text.js"></script>
+<script type="text/javascript" src="js/amfLoader.js"></script>
+<script type="text/javascript" src="js/assimpJSONLoader.js"></script>
+<script type="text/javascript" src="js/colladaLoader.js"></script>
+<script type="text/javascript" src="js/cTMLoader.js"></script>
+<script type="text/javascript" src="js/fBXLoader.js"></script>
+<script type="text/javascript" src="js/jSONLoader.js"></script>
+<script type="text/javascript" src="js/sVGLoader.js"></script>
+<script type="text/javascript" src="js/boxgeometry.js"></script>
+<script type="text/javascript" src="js/video.js"></script>
+<script type="text/javascript" src="js/vRMLoader.js"></script>
+<script type="text/javascript" src="js/particle.js"></script>
+<script type="text/javascript" src="js/bar.js"></script>
+<script type="text/javascript" src="js/mtlLoader.js"></script>
+<script type="text/javascript" src="js/suzhoubuildings.js"></script>
+<script>
+
+   
+  gotosuzhou();
+  map.setCenterAndZoom([13.429274552154425,52.53038634537208],16)
+
+  map.on('mousemove', function(e){
+    //    console.log(e)
+
+        raycaster = new THREE.Raycaster();
+        var mouse = new THREE.Vector2();
+        let camera=threeLayer.getCamera();
+        let scene=threeLayer.getScene();
+        if(!scene) return ;
+
+
+        let size=map.getSize();
+        let width=size.width,height=size.height;
+        mouse.x = ( e.containerPoint.x / width) * 2 - 1;
+        mouse.y = -( ( e.containerPoint.y) / height ) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        raycaster.linePrecision = 3;
+
+     
+        var intersects = raycaster.intersectObjects(scene.children, true);
+        // var intersects = raycaster.intersectObject(points);
+        if(!intersects) return;
+        if(Array.isArray(intersects)&&intersects.length==0) return;
+        console.log(intersects)
+       
+
+});
+
+
+
+// the ThreeLayer to draw buildings
+var threeLayer = new maptalks.ThreeLayer('t', {
+    forceRenderOnMoving : true,
+    forceRenderOnRotating : true,
+    animation:true,
+});
+
+
+
+
+threeLayer.prepareToDraw = function (gl, scene, camera) {
+
+        
+ 
+    var me = this;
+    var light = new THREE.PointLight(0xffffff);
+    camera.add(light);
+
+ 
+
+    let axes=new THREE.AxesHelper(200000000);
+    scene.add(axes);
+ 
+    addjSONLoader();
+
+};
+
+
+
+threeLayer.addTo(map);
+
+
+function generatePointTexture(){
+    var canvas = document.createElement( 'canvas' );
+    let width=16,height=16;
+	canvas.width = width;
+	canvas.height = height;
+	var context = canvas.getContext( '2d' );
+    var gradient=context.createRadialGradient(width/2,height/2,0,width/2,height/2,width/2);
+    gradient.addColorStop(0,'rgba(255,255,255,1)');
+    gradient.addColorStop(0.2,'rgba(0,255,255,1)');
+    gradient.addColorStop(0.4,'rgba(0,0,64,1)');
+    gradient.addColorStop(1,'rgba(0,0,0,1)');
+    context.fillStyle=gradient;
+    context.fillRect(0,0,width,height);
+   return canvas;
+}
+
+
+ function hackMaterials( materials ) {
+				for ( var i = 0; i < materials.length; i ++ ) {
+					var m = materials[ i ];
+					if ( m.name.indexOf( "Body" ) !== -1 ) {
+						var mm = new THREE.MeshStandardMaterial();
+						mm.color.setHex( 0x000000 );
+						mm.lightMap = m.map;
+						// mm.envMap = textureCube;
+						mm.metalness = 0.5;
+						mm.roughness = 0.3;
+						materials[ i ] = mm;
+					} else if ( m.name.indexOf( "tire_car" ) !== -1 ) {
+						var mm = new THREE.MeshStandardMaterial();
+						mm.color.setHex( 0x000000 );
+						mm.lightMap = m.map;
+						mm.metalness = 0.1;
+						mm.roughness = 0.9;
+						materials[ i ] = mm;
+					} else if ( m.name.indexOf( "mirror" ) !== -1 ) {
+						var mm = new THREE.MeshStandardMaterial();
+						mm.color.setHex( 0x808080 );
+						mm.lightMap = m.map;
+						// mm.envMap = textureCube;
+						mm.metalness = 0.9;
+						mm.roughness = 0.5;
+						materials[ i ] = mm;
+					} else if ( m.name.indexOf( "glass" ) !== -1 ) {
+						var mm = new THREE.MeshStandardMaterial();
+						mm.color.copy( m.color );
+//						mm.lightMap = m.map;
+						// mm.envMap = textureCube;
+						mm.metalness = 1;
+						mm.roughtness = 0.1;
+						mm.opacity = m.opacity;
+						mm.transparent = true;
+						materials[ i ] = mm;
+					} else if ( m.name.indexOf( "Material.001" ) !== -1 ) {
+						var mm = new THREE.MeshPhongMaterial( { map: m.map } );
+						mm.specularMap = m.map;
+						mm.shininess = 30;
+						mm.color.setHex( 0x404040 );
+						mm.metal = true;
+						materials[ i ] = mm;
+					}
+					materials[ i ].side = THREE.DoubleSide;
+				}
+}
+            
+
+function generateTexture() {
+	var canvas = document.createElement( 'canvas' );
+	canvas.width = 512;
+	canvas.height = 512;
+	var context = canvas.getContext( '2d' );
+	for ( var i = 0; i < 10000; i ++ ) {
+			context.fillStyle = 'hsl(0,0%,' + ( Math.random() * 50 + 50 ) + '%)';
+			context.beginPath();
+			context.arc( Math.random() * canvas.width, Math.random() * canvas.height, Math.random() + 0.15, 0, Math.PI * 2, true );
+			context.fill();
+	}
+				// context.globalAlpha = 0.075;
+	context.globalCompositeOperation = 'lighter';
+    return canvas;
+}
+
+</script>
+</body>
+</html>
